@@ -12,15 +12,22 @@ pragma solidity ^0.8.20;
 // Interfaces, Libraries, Contracts
 
 contract CrowdFunding {
-    // ─────────────────────────────────────
-    // Errors
+    /* -------------------------------------------------------------------------- */
+    /*                                  Errors                                    */
+    /* -------------------------------------------------------------------------- */
     error CrowdFunding__DeadlineShouldBeInFuture();
-    error CrowdFunding__TitleAndDescriptionLengthCantExceed64();
-    // ─────────────────────────────────────
-    // Type Declarations
+    error CrowdFunding__TitleLengthExceeded64Bytes();
+    error CrowdFunding__DescriptionExceeded256Bytes();
+    error CrowdFunding__idShouldNotBeGreaterThanMaxId();
+    error CrowdFunding__TransferFailed();
+    error CrowdFunding__offsetOutOfBounds();
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  Type Declarations                         */
+    /* -------------------------------------------------------------------------- */
     /**
      * @dev address占用20bytes，占1个slot
-     * @dev 将uint256排在一起，连续使用3个slot
+     * @dev 将uint256排在一起，连续使用slot
      * @dev string作为动态类型本身就要单独占据slot,应对长度做限制
      * @dev uint和address的动态数组放后面，不打散结构
      */
@@ -35,29 +42,40 @@ contract CrowdFunding {
         address[] donators;
     }
 
-    // ─────────────────────────────────────
-    // State Variables
-    mapping(uint256 => Campaign) public s_campaigns;
-    uint256 public s_idOfCampaign;
+    /* -------------------------------------------------------------------------- */
+    /*                                  State Variables                           */
+    /* -------------------------------------------------------------------------- */
+    mapping(uint256 => Campaign) public sCampaigns;
+    uint256 public sIdOfCampaign;
 
-    // ─────────────────────────────────────
-    // Events
+    /* -------------------------------------------------------------------------- */
+    /*                                  Events                                    */
+    /* -------------------------------------------------------------------------- */
     event CrowdFundingCreated(uint256 indexed idOfCampaign);
 
-    // ─────────────────────────────────────
-    // Modifiers
+    /* -------------------------------------------------------------------------- */
+    /*                                  Modifiers                                 */
+    /* -------------------------------------------------------------------------- */
 
-    // ─────────────────────────────────────
-    // Functions
+    /* -------------------------------------------------------------------------- */
+    /*                                  Functions                                 */
+    /* -------------------------------------------------------------------------- */
 
-    // Constructor
-    constructor() {}
+    /* -------------------------------------------------------------------------- */
+    /*                                  Constructor                               */
+    /* -------------------------------------------------------------------------- */
 
-    // Receive Function
+    /* -------------------------------------------------------------------------- */
+    /*                                  Receive Function                          */
+    /* -------------------------------------------------------------------------- */
 
-    // Fallback Function
+    /* -------------------------------------------------------------------------- */
+    /*                                  Fallback Function                         */
+    /* -------------------------------------------------------------------------- */
 
-    // External Functions
+    /* -------------------------------------------------------------------------- */
+    /*                                  External Functions                        */
+    /* -------------------------------------------------------------------------- */
     function createCampaign(
         address _owner,
         string memory _title,
@@ -65,12 +83,11 @@ contract CrowdFunding {
         uint256 _deadline,
         uint256 _targetInEther
     ) public {
-        if (_deadline <= block.timestamp)
-            revert CrowdFunding__DeadlineShouldBeInFuture();
-        if (bytes(_title).length > 64 || bytes(_description).length > 64)
-            revert CrowdFunding__TitleAndDescriptionLengthCantExceed64();
+        _deadlineShouldBeInFuture(_deadline);
+        _titleLengthCantExceeded64Bytes(_title);
+        _descriptionCantExceeded256Bytes(_description);
 
-        Campaign storage campaign = s_campaigns[s_idOfCampaign];
+        Campaign storage campaign = sCampaigns[sIdOfCampaign];
 
         campaign.owner = _owner;
         campaign.title = _title;
@@ -78,46 +95,150 @@ contract CrowdFunding {
         campaign.deadline = _deadline;
         campaign.targetInEther = _targetInEther;
 
-        campaign.amountCollectedInEther = 0;
+        sIdOfCampaign++;
 
-        s_idOfCampaign++;
-
-        emit CrowdFundingCreated(uint256(s_idOfCampaign - 1));
+        emit CrowdFundingCreated(uint256(sIdOfCampaign - 1));
     }
 
     function donateToCampaign(uint256 _id) external payable {
+        _idShouldNotBeGreaterThanMaxId(_id);
         uint256 amount = msg.value;
 
-        Campaign storage campaign = s_campaigns[_id];
+        Campaign storage campaign = sCampaigns[_id];
         campaign.donators.push(msg.sender);
         campaign.donations.push(amount);
 
-        (bool sent, ) = payable(campaign.owner).call{value: amount}("");
+        (bool sent,) = payable(campaign.owner).call{value: amount}("");
+        if (!sent) {
+            revert CrowdFunding__TransferFailed();
+        }
 
-        if (sent) {
-            campaign.amountCollectedInEther += amount;
+        campaign.amountCollectedInEther += amount;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                Public Functions                            */
+    /* -------------------------------------------------------------------------- */
+
+    /* -------------------------------------------------------------------------- */
+    /*                                Internal Functions                          */
+    /* -------------------------------------------------------------------------- */
+
+    /* -------------------------------------------------------------------------- */
+    /*                                Private Functions                           */
+    /* -------------------------------------------------------------------------- */
+    /**
+     * @notice 该函数用于检测id是否超过最大值
+     * @param _id 查询id
+     */
+    function _idShouldNotBeGreaterThanMaxId(uint256 _id) private view {
+        if (_id > sIdOfCampaign) {
+            revert CrowdFunding__idShouldNotBeGreaterThanMaxId();
         }
     }
 
-    // Public Functions
-    function getDonators(
-        uint256 _id
-    ) public view returns (address[] memory, uint256[] memory) {
-        return (s_campaigns[_id].donators, s_campaigns[_id].donations);
+    /**
+     * @notice 该函数用于检测死线是否位于未来
+     * 显然，死线不应该存在于现在或者过去，这毫无意义
+     * @param _deadline 用户所设定的deadline
+     */
+    function _deadlineShouldBeInFuture(uint256 _deadline) private view {
+        if (_deadline <= block.timestamp) {
+            revert CrowdFunding__DeadlineShouldBeInFuture();
+        }
     }
 
-    function getCampaigns() public view returns (Campaign[] memory) {
-        Campaign[] memory allCampaigns = new Campaign[](s_idOfCampaign);
-        for (uint i = 0; i < s_idOfCampaign; i++) {
-            Campaign storage item = s_campaigns[i];
+    /**
+     * @notice 该函数用于检测title是否超过64bytes
+     * 我们不希望用户输入过多内容
+     * @param _title 用户所设定的title
+     */
+    function _titleLengthCantExceeded64Bytes(string memory _title) private pure {
+        if (bytes(_title).length > 64) {
+            revert CrowdFunding__TitleLengthExceeded64Bytes();
+        }
+    }
+
+    /**
+     * @notice 该函数用于检测description是否超过256bytes
+     * 我们不希望用户输入过多内容
+     * @param _description 用户所设定的description
+     */
+    function _descriptionCantExceeded256Bytes(string memory _description) private pure {
+        if (bytes(_description).length > 256) {
+            revert CrowdFunding__DescriptionExceeded256Bytes();
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  View & Pure Functions                     */
+    /* -------------------------------------------------------------------------- */
+    /**
+     * @notice 该函数用于返回当前最大的活动id
+     * @notice 该id同时反映出，该合同目前一共存在多少活动
+     * @return sIdOfCampaign 当前的id计数，也就是目前合同内编号最大的活动id
+     */
+    function getCurrentMaxCampaignId() public view returns (uint256) {
+        return sIdOfCampaign;
+    }
+
+    /**
+     * @notice 该函数用于返回（单个）活动当前的捐献者和捐献金额信息
+     * @param _id 想要查询的活动id
+     * @return sCampaigns[_id].donators 返回对应的捐献者
+     * @return sCampaigns[_id].donations 返回对应的捐献金额
+     */
+    function getDonatorsAndDonations(uint256 _id) public view returns (address[] memory, uint256[] memory) {
+        _idShouldNotBeGreaterThanMaxId(_id);
+        return (sCampaigns[_id].donators, sCampaigns[_id].donations);
+    }
+
+    /**
+     * @notice 该函数用于返回（单个）活动的所有信息
+     * @param _id 想要查询的活动id
+     * @return sCampaigns[_id] 对应的活动
+     * @dev struct内存在多个动态数组，该函数返回单个campaign，减少读取压力
+     */
+    function getCampaign(uint256 _id) public view returns (Campaign memory) {
+        _idShouldNotBeGreaterThanMaxId(_id);
+        return sCampaigns[_id];
+    }
+
+    /**
+     * @notice 该函数用于返回（多个）活动的所有信息
+     * @param offset 跳过的活动数目（与各活动的id对应）
+     * @param limit 限制的最大查询数量，超过的话只返回最大数量
+     * @return campaigns 对应的活动
+     * @dev 优化查询，增加分页查询和返回限制，以减少读取压力
+     */
+    function getCampaignsPaginated(uint256 offset, uint256 limit) public view returns (Campaign[] memory) {
+        if (offset > sIdOfCampaign) revert CrowdFunding__offsetOutOfBounds();
+
+        uint256 remaining = sIdOfCampaign - offset;
+        // 增减返回限制，减少压力
+        uint256 size = remaining < limit ? remaining : limit;
+
+        Campaign[] memory campaigns = new Campaign[](size);
+
+        for (uint256 i = 0; i < size; i++) {
+            campaigns[i] = sCampaigns[offset + i];
+        }
+
+        return campaigns;
+    }
+
+    /**
+     * @notice 该函数用于返回所有活动的所有信息
+     * @return allCampaigns 合同内的所有活动
+     * @dev 要是数据小，或者就想一次性返回全部，那就直接跑全部返回吧
+     */
+    function getAllCampaigns() public view returns (Campaign[] memory) {
+        Campaign[] memory allCampaigns = new Campaign[](sIdOfCampaign);
+        for (uint256 i = 0; i < sIdOfCampaign; i++) {
+            Campaign storage item = sCampaigns[i];
             allCampaigns[i] = item;
         }
 
         return allCampaigns;
     }
-    // Internal Functions
-
-    // Private Functions
-
-    // View & Pure Functions
 }
