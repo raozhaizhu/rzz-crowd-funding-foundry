@@ -1,0 +1,151 @@
+{
+  "test/CrowdFundingTest.t.sol:CrowdFundingTest": {
+    "duration": "5ms 502µs 84ns",
+    "test_results": {
+      "test_CreateCampaign_RevertIfDescTooLong()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 14278 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "857µs 167ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_CreateCampaign_RevertIfPastDeadline()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 13733 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "804µs 375ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_CreateCampaign_RevertIfTitleTooLong()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 14087 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "822µs 792ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_CreateCampaign_Success()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 170638 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "910µs 917ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_DonateToCampaign_Failed()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 333200 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "834µs",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_DonateToCampaign_RevertIfInvalidId()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 20398 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "770µs 167ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_DonateToCampaign_Success()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 289089 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "762µs 875ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_GetAllCampaigns()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 301683 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "205µs 916ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_GetCampaignsPaginated()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 681708 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "931µs 625ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_GetCampaignsPaginated_IfExceedLimit()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 169867 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "604µs 625ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      },
+      "test_GetCampaignsPaginated_RevertIfOffsetTooLarge()": {
+        "status": "Success",
+        "reason": null,
+        "counterexample": null,
+        "logs": [],
+        "decoded_logs": [],
+        "kind": { "Unit": { "gas": 155084 } },
+        "traces": [],
+        "labeled_addresses": {},
+        "duration": "790µs 458ns",
+        "breakpoints": {},
+        "gas_snapshots": {}
+      }
+    },
+    "warnings": []
+  }
+}
