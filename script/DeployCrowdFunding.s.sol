@@ -10,7 +10,7 @@ contract DeployCrowdFunding is Script {
     function run() external returns (CrowdFunding) {
         vm.startBroadcast();
         CrowdFunding crowdFunding = new CrowdFunding();
-        console2.log(" contract address", address(crowdFunding));
+        // console2.log(" contract address", address(crowdFunding));
         vm.stopBroadcast();
         return crowdFunding;
     }

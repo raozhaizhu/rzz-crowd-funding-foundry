@@ -3,7 +3,9 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {CrowdFunding} from "src/CrowdFunding.sol";
+import {console} from "forge-std/console.sol";
 import {DeployCrowdFunding} from "script/DeployCrowdFunding.s.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract CrowdFundingTest is Test {
     DeployCrowdFunding deployer;
@@ -22,6 +24,10 @@ contract CrowdFundingTest is Test {
         vm.prank(owner);
         crowdfunding.createCampaign(owner, "Test Title", "Test Description", block.timestamp + 1 days, 1 ether);
         CrowdFunding.Campaign memory campaign = crowdfunding.getCampaign(0);
+
+        // console.log("deadline:", campaign.deadline);
+        // console.log("targetInEther:", campaign.targetInEther);
+        // console.log("*** owner:", owner, "***");
 
         assertEq(campaign.owner, owner);
         assertEq(campaign.title, "Test Title");
@@ -54,7 +60,12 @@ contract CrowdFundingTest is Test {
         vm.prank(donor);
         crowdfunding.donateToCampaign{value: 0.5 ether}(0);
 
-        (, uint256[] memory donations) = crowdfunding.getDonatorsAndDonations(0);
+        (address[] memory donators, uint256[] memory donations) = crowdfunding.getDonatorsAndDonations(0);
+
+        // console.log("*** donators:", donators[0], "***");
+        // console.log("*** donations:", donations[0], "***");
+
+        assertEq(donators[0], donor);
         assertEq(donations[0], 0.5 ether);
     }
 
@@ -67,10 +78,12 @@ contract CrowdFundingTest is Test {
     function test_GetCampaignsPaginated() public {
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(owner);
-            crowdfunding.createCampaign(owner, "t", "d", block.timestamp + 1 days, 1 ether);
+            crowdfunding.createCampaign(owner, Strings.toString(i), "d", block.timestamp + 1 days, 1 ether);
         }
         CrowdFunding.Campaign[] memory campaigns = crowdfunding.getCampaignsPaginated(1, 3);
         assertEq(campaigns.length, 3);
+
+        console.log("*** campaigns[0]:", campaigns[0], "***");
     }
 
     function test_GetCampaignsPaginated_RevertIfOffsetTooLarge() public {
