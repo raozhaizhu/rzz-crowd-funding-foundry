@@ -9,7 +9,9 @@ out/
 
 # Docs
 docs/
+# Report
 report/
-
+# Broadcast
+broadcast/
 # Dotenv file
 .env

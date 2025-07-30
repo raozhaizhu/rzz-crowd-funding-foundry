@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {CrowdFunding} from "src/CrowdFunding.sol";
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 import {DeployCrowdFunding} from "script/DeployCrowdFunding.s.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
