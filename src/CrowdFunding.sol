@@ -16,12 +16,12 @@ contract CrowdFunding {
     /*                                  Errors                                    */
     /* -------------------------------------------------------------------------- */
     error CrowdFunding__DeadlineShouldBeInFuture();
+    error CrowdFunding__CampaignExceededDeadLine();
     error CrowdFunding__TitleLengthExceeded64Bytes();
     error CrowdFunding__DescriptionExceeded256Bytes();
     error CrowdFunding__idShouldNotBeGreaterOrEqualToMaxId();
     error CrowdFunding__TransferFailed();
     error CrowdFunding__offsetOutOfBounds();
-
     /* -------------------------------------------------------------------------- */
     /*                                  Type Declarations                         */
     /* -------------------------------------------------------------------------- */
@@ -35,13 +35,15 @@ contract CrowdFunding {
      * @dev donations donators 这里直接存动态数组而不是mapping,避免太过复杂
      * @dev donations and donators are stored as dynamic arrays instead of mappings to avoid complexity
      */
+
     struct Campaign {
         address owner;
         uint256 deadline;
-        uint256 targetInEther;
-        uint256 amountCollectedInEther;
+        uint256 targetInEthWei;
+        uint256 amountCollectedInEthWei;
         string title;
         string description;
+        string heroImageCID;
         uint256[] donations;
         address[] donators;
     }
@@ -53,7 +55,7 @@ contract CrowdFunding {
      * @notice 用于存储所有活动
      * @notice ir stores all campaigns
      */
-    mapping(uint256 => Campaign) public sCampaigns;
+    mapping(uint256 => Campaign) private sCampaigns;
     /**
      * @notice 记录当前id,也就是目前的最大id
      * @notice it records current id number, it's also the biggest id for now
@@ -102,8 +104,9 @@ contract CrowdFunding {
         address _owner,
         string memory _title,
         string memory _description,
+        string memory _heroImageCID,
         uint256 _deadline,
-        uint256 _targetInEther
+        uint256 _targetInEthWei
     ) public {
         _deadlineShouldBeInFuture(_deadline);
         _titleLengthCantExceeded64Bytes(_title);
@@ -114,8 +117,9 @@ contract CrowdFunding {
         campaign.owner = _owner;
         campaign.title = _title;
         campaign.description = _description;
+        campaign.heroImageCID = _heroImageCID;
         campaign.deadline = _deadline;
-        campaign.targetInEther = _targetInEther;
+        campaign.targetInEthWei = _targetInEthWei;
 
         sIdOfCampaign++;
 
@@ -132,9 +136,13 @@ contract CrowdFunding {
 
     function donateToCampaign(uint256 _id) external payable {
         _idShouldNotBeGreaterOrEqualToMaxId(_id);
+
         uint256 amount = msg.value;
 
         Campaign storage campaign = sCampaigns[_id];
+
+        _deadlineShouldBeInFuture(campaign.deadline);
+
         campaign.donators.push(msg.sender);
         campaign.donations.push(amount);
 
@@ -143,7 +151,7 @@ contract CrowdFunding {
             revert CrowdFunding__TransferFailed();
         }
 
-        campaign.amountCollectedInEther += amount;
+        campaign.amountCollectedInEthWei += amount;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -157,6 +165,7 @@ contract CrowdFunding {
     /* -------------------------------------------------------------------------- */
     /*                                Private Functions                           */
     /* -------------------------------------------------------------------------- */
+
     /**
      * @notice 该函数用于检测id是否超过最大值
      * @notice checks if the param id greater or equal to the current maximum id(sIdOfCampaign)

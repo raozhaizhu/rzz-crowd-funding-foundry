@@ -19,6 +19,8 @@ contract CrowdFundingTest is Test {
     address owner = address(0x1);
     address donor = address(0x2);
 
+    string public constant DEFAULT_CID = "bafkreies4pvdtbu53z2f3rio7rl5jbszxpwfbuthnke62b3qpakqg5x34i";
+
     function setUp() public {
         deployer = new DeployCrowdFunding();
         crowdFunding = deployer.run();
@@ -29,24 +31,27 @@ contract CrowdFundingTest is Test {
     function test_CreateCampaign_Success() public {
         //setUp
         vm.prank(owner);
-        crowdFunding.createCampaign(owner, "Test Title", "Test Description", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(
+            owner, "Test Title", "Test Description", DEFAULT_CID, block.timestamp + 1 days, 1 ether
+        );
         //execution
         CrowdFunding.Campaign memory campaign = crowdFunding.getCampaign(0);
         // console.log("deadline:", campaign.deadline);
-        // console.log("targetInEther:", campaign.targetInEther);
+        // console.log("targetInEthWei:", campaign.targetInEthWei);
         // console.log("*** owner:", owner, "***");
         //assert
         assertEq(campaign.owner, owner);
         assertEq(campaign.title, "Test Title");
         assertEq(campaign.description, "Test Description");
+        assertEq(campaign.heroImageCID, DEFAULT_CID);
         assertEq(campaign.deadline, block.timestamp + 1 days);
-        assertEq(campaign.targetInEther, 1 ether);
+        assertEq(campaign.targetInEthWei, 1 ether);
     }
 
     function test_CreateCampaign_RevertIfPastDeadline() public {
         //setUp//execution//assert
         vm.expectRevert(CrowdFunding.CrowdFunding__DeadlineShouldBeInFuture.selector);
-        crowdFunding.createCampaign(owner, "T", "D", block.timestamp - 1, 1 ether);
+        crowdFunding.createCampaign(owner, "T", "D", DEFAULT_CID, block.timestamp - 1, 1 ether);
     }
 
     function test_CreateCampaign_RevertIfTitleTooLong() public {
@@ -54,19 +59,19 @@ contract CrowdFundingTest is Test {
         string memory longTitle = new string(65);
         //execution//assert
         vm.expectRevert(CrowdFunding.CrowdFunding__TitleLengthExceeded64Bytes.selector);
-        crowdFunding.createCampaign(owner, longTitle, "desc", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(owner, longTitle, "desc", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
     }
 
     function test_CreateCampaign_RevertIfDescTooLong() public {
         string memory longDesc = new string(257);
         vm.expectRevert(CrowdFunding.CrowdFunding__DescriptionExceeded256Bytes.selector);
-        crowdFunding.createCampaign(owner, "title", longDesc, block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(owner, "title", longDesc, DEFAULT_CID, block.timestamp + 1 days, 1 ether);
     }
 
     function test_DonateToCampaign_Success() public {
         //setUp
         vm.prank(owner);
-        crowdFunding.createCampaign(owner, "title", "desc", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(owner, "title", "desc", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         //execution
         vm.prank(donor);
         crowdFunding.donateToCampaign{value: 0.5 ether}(0);
@@ -78,11 +83,13 @@ contract CrowdFundingTest is Test {
         assertEq(donations[0], 0.5 ether);
     }
 
-    function test_DonateToCampaign_RevertIfFailed() public {
+    function test_DonateToCampaign_RevertIfTransferFailed() public {
         //setUp
         RejectEther rejectContract = new RejectEther();
         vm.prank(address(rejectContract));
-        crowdFunding.createCampaign(address(rejectContract), "title", "desc", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(
+            address(rejectContract), "title", "desc", DEFAULT_CID, block.timestamp + 1 days, 1 ether
+        );
         //execution//assert
         vm.prank(donor);
         vm.expectRevert(CrowdFunding.CrowdFunding__TransferFailed.selector);
@@ -96,10 +103,22 @@ contract CrowdFundingTest is Test {
         crowdFunding.donateToCampaign{value: 1 ether}(0);
     }
 
+    function test_DonateToCampaign_RevertIfDeadlineIsntInFuture() public {
+        //setUp
+        vm.prank(owner);
+        crowdFunding.createCampaign(owner, "t", "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
+        vm.warp(block.timestamp + 2 days);
+        //execution
+        //assert
+        vm.expectRevert(CrowdFunding.CrowdFunding__DeadlineShouldBeInFuture.selector);
+        vm.prank(donor);
+        crowdFunding.donateToCampaign{value: 1 ether}(0);
+    }
+
     function test_DonateToCampaign_RevertIfInvalidIdAgain() public {
         //setup
         vm.prank(owner);
-        crowdFunding.createCampaign(owner, "t", "d", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(owner, "t", "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         //execution
         vm.expectRevert(CrowdFunding.CrowdFunding__idShouldNotBeGreaterOrEqualToMaxId.selector);
         crowdFunding.getCampaign(1);
@@ -108,7 +127,7 @@ contract CrowdFundingTest is Test {
     function test_GetSingleCampaign() public {
         //setUp
         vm.prank(owner);
-        crowdFunding.createCampaign(owner, "title", "desc", block.timestamp + 1 days, 1 ether);
+        crowdFunding.createCampaign(owner, "title", "desc", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
 
         address[] memory emptyDonators;
         uint256[] memory emptyDonations;
@@ -116,9 +135,10 @@ contract CrowdFundingTest is Test {
             owner: owner,
             title: "title",
             description: "desc",
+            heroImageCID: DEFAULT_CID,
             deadline: block.timestamp + 1 days,
-            targetInEther: 1 ether,
-            amountCollectedInEther: 0,
+            targetInEthWei: 1 ether,
+            amountCollectedInEthWei: 0,
             donators: emptyDonators,
             donations: emptyDonations
         });
@@ -129,15 +149,15 @@ contract CrowdFundingTest is Test {
         assertEq(actual.title, expected.title);
         assertEq(actual.description, expected.description);
         assertEq(actual.deadline, expected.deadline);
-        assertEq(actual.targetInEther, expected.targetInEther);
-        assertEq(actual.amountCollectedInEther, expected.amountCollectedInEther);
+        assertEq(actual.targetInEthWei, expected.targetInEthWei);
+        assertEq(actual.amountCollectedInEthWei, expected.amountCollectedInEthWei);
     }
 
     function test_GetCampaignsPaginated() public {
         //setUp
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(owner);
-            crowdFunding.createCampaign(owner, Strings.toString(i), "d", block.timestamp + 1 days, 1 ether);
+            crowdFunding.createCampaign(owner, Strings.toString(i), "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         }
         //execution
         CrowdFunding.Campaign[] memory campaigns = crowdFunding.getCampaignsPaginated(1, 3);
@@ -152,7 +172,7 @@ contract CrowdFundingTest is Test {
         //setUp
         for (uint256 i = 0; i < 1; i++) {
             vm.prank(owner);
-            crowdFunding.createCampaign(owner, Strings.toString(i), "d", block.timestamp + 1 days, 1 ether);
+            crowdFunding.createCampaign(owner, Strings.toString(i), "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         }
         //execution//assert
         vm.expectRevert(CrowdFunding.CrowdFunding__offsetOutOfBounds.selector);
@@ -163,7 +183,7 @@ contract CrowdFundingTest is Test {
         //setUp
         for (uint256 i = 0; i < 1; i++) {
             vm.prank(owner);
-            crowdFunding.createCampaign(owner, Strings.toString(i), "d", block.timestamp + 1 days, 1 ether);
+            crowdFunding.createCampaign(owner, Strings.toString(i), "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         }
         //execution
         CrowdFunding.Campaign[] memory campaigns = crowdFunding.getCampaignsPaginated(0, 2);
@@ -175,7 +195,7 @@ contract CrowdFundingTest is Test {
         //setUp
         for (uint256 i = 0; i < 2; i++) {
             vm.prank(owner);
-            crowdFunding.createCampaign(owner, "t", "d", block.timestamp + 1 days, 1 ether);
+            crowdFunding.createCampaign(owner, "t", "d", DEFAULT_CID, block.timestamp + 1 days, 1 ether);
         }
         //execution
         CrowdFunding.Campaign[] memory all = crowdFunding.getAllCampaigns();
