@@ -59,7 +59,7 @@ contract CrowdFunding {
     /**
      * @notice 记录当前id,也就是目前的最大id
      * @notice it records current id number, it's also the biggest id for now
-     * @notice 此ID仅在创建合同时使用，创建后自动递增（创建前不关联任何活动）
+     * @notice 此ID仅在创建活动时使用，创建后自动递增（创建前不关联任何活动）
      * @notice this ID is used for contract creation and auto-increments afterwards
      *         (not associated with any campaign before creation)
      */
